@@ -1,6 +1,9 @@
 package state
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 type ProjectManager struct {
 	isOpen         bool
@@ -17,7 +20,9 @@ func (p *ProjectManager) GetPath() string {
 }
 
 func (p *ProjectManager) AddProject(path string) {
-	p.recentProjects = append([]string{path}, p.recentProjects...)
+	if !slices.Contains(p.recentProjects, path) {
+		p.recentProjects = append([]string{path}, p.recentProjects...)
+	}
 }
 
 func (p *ProjectManager) RemoveProject(idx int) {
