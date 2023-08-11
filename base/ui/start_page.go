@@ -67,11 +67,11 @@ func generateProjectButtons(app *state.EditorApp, open func(int)) []fyne.CanvasO
 	recent := app.GetProjectManager().GetRecentProjects()
 	elements := make([]fyne.CanvasObject, 0, len(recent))
 	for _, path := range recent {
-		path_c := path
+		pathCopy := path
 		button := widget.NewButton(
-			shortenPath(path_c),
+			shortenPath(pathCopy),
 			func() {
-				tryOpen(path_c, app.GetProjectManager(), app.GetMainWindow(), open)
+				tryOpen(pathCopy, app.GetProjectManager(), app.GetMainWindow(), open)
 			},
 		)
 		button.Alignment = widget.ButtonAlignLeading
@@ -91,10 +91,18 @@ func shortenPath(path string) string {
 func generateRemoveButtons(app *state.EditorApp, remove func(idx int)) []fyne.CanvasObject {
 	recent := app.GetProjectManager().GetRecentProjects()
 	elements := make([]fyne.CanvasObject, 0, len(recent))
-	for i, _ := range recent {
+	for i, path := range recent {
 		//i is updated, using i will always remove last project
+		pathCopy := path
 		j := i
-		button := widget.NewButtonWithIcon("", theme.ContentClearIcon(), func() { remove(j) })
+		button := widget.NewButtonWithIcon("", theme.ContentClearIcon(), func() {
+			conf := dialog.NewConfirm("Remove project", "Do you want to remove \""+shortenPath(pathCopy)+"\" from the project list?", func(b bool) {
+				if b {
+					remove(j)
+				}
+			}, app.GetMainWindow())
+			conf.Show()
+		})
 		elements = append(elements, container.NewHBox(button))
 	}
 	return elements
