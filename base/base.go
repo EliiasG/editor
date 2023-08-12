@@ -10,5 +10,5 @@ func RunApp(features []state.Feature) {
 	for _, v := range features {
 		app.AddFeature(v)
 	}
-	app.Run(ui.GetRoot(&app))
+	app.Run(ui.NewRoot(&app))
 }

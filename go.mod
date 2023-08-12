@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	fyne.io/fyne/v2 v2.3.5
-	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad
+	fyne.io/x/fyne v0.0.0-20230717140956-ad10f343f15e
 )
 
 require (
@@ -22,6 +22,7 @@ require (
 	github.com/goki/freetype v0.0.0-20220119013949-7a161fd3728c // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/srwiley/oksvg v0.0.0-20220731023508-a61f04f16b76 // indirect
 	github.com/srwiley/rasterx v0.0.0-20210519020934-456a8d69b780 // indirect

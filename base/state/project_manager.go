@@ -3,19 +3,22 @@ package state
 import (
 	"slices"
 	"strings"
+
+	"github.com/eliiasg/editor/base/fileactions"
 )
 
 type ProjectManager struct {
 	isOpen         bool
 	openPath       string
 	recentProjects []string
+	fileActions    fileactions.FileActions
 }
 
 func (p *ProjectManager) IsOpen() bool {
 	return p.isOpen
 }
 
-func (p *ProjectManager) GetPath() string {
+func (p *ProjectManager) Path() string {
 	return p.openPath
 }
 
@@ -41,8 +44,12 @@ func (p *ProjectManager) Open(idx int) {
 	p.AddProject(p.openPath)
 }
 
-func (p *ProjectManager) GetRecentProjects() []string {
+func (p *ProjectManager) RecentProjects() []string {
 	return p.recentProjects
+}
+
+func (p *ProjectManager) FileActions() fileactions.FileActions {
+	return p.fileActions
 }
 
 func LoadProjectManagerFromSave(app *EditorApp) *ProjectManager {
@@ -53,5 +60,6 @@ func LoadProjectManagerFromSave(app *EditorApp) *ProjectManager {
 	}
 	return &ProjectManager{
 		recentProjects: projectSlice,
+		fileActions:    fileactions.NewSimple(),
 	}
 }

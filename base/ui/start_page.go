@@ -11,7 +11,7 @@ import (
 	"github.com/eliiasg/editor/base/state"
 )
 
-func GetStartPage(app *state.EditorApp, open func(int)) fyne.CanvasObject {
+func NewStartPage(app *state.EditorApp, open func(int)) fyne.CanvasObject {
 	projectButtonBox := container.NewVBox()
 	removeButtonBox := container.NewVBox()
 	rst := func() {
@@ -29,7 +29,7 @@ func GetStartPage(app *state.EditorApp, open func(int)) fyne.CanvasObject {
 	)
 	return container.NewBorder(
 		container.NewHBox(
-			getAddButton(app, rst),
+			newAddButton(app, rst),
 		),
 		nil,
 		nil,
@@ -41,37 +41,37 @@ func GetStartPage(app *state.EditorApp, open func(int)) fyne.CanvasObject {
 func resetProjectList(app *state.EditorApp, open func(int), projectButtonContainer, removeButtonContainer *fyne.Container) {
 	projectButtonContainer.Objects = generateProjectButtons(app, open)
 	removeButtonContainer.Objects = generateRemoveButtons(app, func(idx int) {
-		projman := app.GetProjectManager()
+		projman := app.ProjectManager()
 		projman.RemoveProject(idx)
 		projman.Save(app)
 		resetProjectList(app, open, projectButtonContainer, removeButtonContainer)
 	})
 }
 
-func getAddButton(app *state.EditorApp, reset func()) fyne.CanvasObject {
+func newAddButton(app *state.EditorApp, reset func()) fyne.CanvasObject {
 	return widget.NewButton("Add Project", func() {
 		openDialog := dialog.NewFolderOpen(func(lu fyne.ListableURI, err error) {
 			if lu == nil {
 				return
 			}
-			projman := app.GetProjectManager()
+			projman := app.ProjectManager()
 			projman.AddProject(lu.Path())
 			projman.Save(app)
 			reset()
-		}, app.GetMainWindow())
+		}, app.MainWindow())
 		openDialog.Show()
 	})
 }
 
 func generateProjectButtons(app *state.EditorApp, open func(int)) []fyne.CanvasObject {
-	recent := app.GetProjectManager().GetRecentProjects()
+	recent := app.ProjectManager().RecentProjects()
 	elements := make([]fyne.CanvasObject, 0, len(recent))
 	for _, path := range recent {
 		pathCopy := path
 		button := widget.NewButton(
 			shortenPath(pathCopy),
 			func() {
-				tryOpen(pathCopy, app.GetProjectManager(), app.GetMainWindow(), open)
+				tryOpen(pathCopy, app.ProjectManager(), app.MainWindow(), open)
 			},
 		)
 		button.Alignment = widget.ButtonAlignLeading
@@ -89,7 +89,7 @@ func shortenPath(path string) string {
 }
 
 func generateRemoveButtons(app *state.EditorApp, remove func(idx int)) []fyne.CanvasObject {
-	recent := app.GetProjectManager().GetRecentProjects()
+	recent := app.ProjectManager().RecentProjects()
 	elements := make([]fyne.CanvasObject, 0, len(recent))
 	for i, path := range recent {
 		//i is updated, using i will always remove last project
@@ -100,7 +100,7 @@ func generateRemoveButtons(app *state.EditorApp, remove func(idx int)) []fyne.Ca
 				if b {
 					remove(j)
 				}
-			}, app.GetMainWindow())
+			}, app.MainWindow())
 			conf.Show()
 		})
 		elements = append(elements, container.NewHBox(button))
@@ -115,7 +115,7 @@ func tryOpen(path string, manager *state.ProjectManager, win fyne.Window, open f
 		"Do you wnat to open \""+shortenPath(path)+"\"?",
 		func(b bool) {
 			if b {
-				idx := slices.Index(manager.GetRecentProjects(), path)
+				idx := slices.Index(manager.RecentProjects(), path)
 				if idx == -1 {
 					manager.AddProject(path)
 					idx = 0

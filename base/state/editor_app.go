@@ -3,6 +3,7 @@ package state
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/x/fyne/theme"
 )
 
 type EditorApp struct {
@@ -25,7 +26,7 @@ func (e *EditorApp) AddFeature(feature Feature) {
 	feature.Init(e)
 }
 
-func (e *EditorApp) GetProjectManager() *ProjectManager {
+func (e *EditorApp) ProjectManager() *ProjectManager {
 	return e.projectManager
 }
 
@@ -35,13 +36,14 @@ func (e *EditorApp) Run(root fyne.CanvasObject) {
 	e.mainWindow.ShowAndRun()
 }
 
-func (e *EditorApp) GetMainWindow() fyne.Window {
+func (e *EditorApp) MainWindow() fyne.Window {
 	return e.mainWindow
 }
 
 func NewEditorApp() EditorApp {
 	eApp := EditorApp{}
 	eApp.app = app.NewWithID("eliiasg.editor")
+	eApp.app.Settings().SetTheme(theme.AdwaitaTheme())
 	eApp.projectManager = LoadProjectManagerFromSave(&eApp)
 	eApp.mainWindow = eApp.app.NewWindow("Editor")
 	eApp.mainWindow.SetMaster()
