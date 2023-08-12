@@ -6,11 +6,13 @@ import (
 	"github.com/eliiasg/editor/base/state"
 )
 
+const DoubleClickTimeMS int64 = 500
+
 func NewRoot(app *state.EditorApp) fyne.CanvasObject {
 	root := container.NewMax()
 	root.Objects = []fyne.CanvasObject{
 		NewStartPage(app, func(i int) {
-			app.ProjectManager().Open(i)
+			app.ProjectManager().OpenProject(i)
 			root.Objects = []fyne.CanvasObject{NewMainPage(app)}
 		}),
 	}

@@ -1,5 +1,14 @@
 package fileactions
 
+import (
+	"os"
+	pth "path"
+
+	cp "github.com/otiai10/copy"
+
+	"github.com/skratchdot/open-golang/open"
+)
+
 type FileActions interface {
 	Open(path string)
 	Delete(path string)
@@ -13,49 +22,67 @@ type FileActions interface {
 	HasClipboardContent() bool
 }
 
-type simpleImpl struct{}
-
-func (f simpleImpl) Open(path string) {
-	panic("not implemented") // TODO: Implement
+type simpleImpl struct {
+	copied  string
+	cutting bool
 }
 
-func (f simpleImpl) Delete(path string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) Open(path string) {
+	open.Start(path)
+	//TODO features
 }
 
-func (f simpleImpl) CreateFile(path string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) Delete(path string) {
+	os.RemoveAll(path)
 }
 
-func (f simpleImpl) CreateFolder(path string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) CreateFile(path string) {
+	file, _ := os.Create(path)
+	file.Close()
 }
 
-func (f simpleImpl) Cut(path string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) CreateFolder(path string) {
+	os.MkdirAll(path, 0777)
 }
 
-func (f simpleImpl) Copy(path string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) Cut(path string) {
+	f.copied = path
+	f.cutting = true
 }
 
-func (f simpleImpl) Paste(path string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) Copy(path string) {
+	f.copied = path
+	f.cutting = false
 }
 
-func (f simpleImpl) Rename(path, name string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) Paste(path string) {
+	newPath := pth.Join(path, pth.Base(f.copied))
+	for exists(newPath) {
+		newPath += "_"
+	}
+	err := cp.Copy(f.copied, newPath)
+	if err == nil && f.cutting {
+		os.RemoveAll(f.copied)
+	}
 }
 
-func (f simpleImpl) Reveal(path string) {
-	panic("not implemented") // TODO: Implement
+func (f *simpleImpl) Rename(path, name string) {
+	os.Rename(path, pth.Join(pth.Dir(path), name))
 }
 
-func (f simpleImpl) HasClipboardContent() bool {
-	return false
-	//TODO
+func (f *simpleImpl) Reveal(path string) {
+	open.Start(pth.Dir(path))
+}
+
+func (f *simpleImpl) HasClipboardContent() bool {
+	return f.copied != ""
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }
 
 func NewSimple() FileActions {
-	return simpleImpl{}
+	return &simpleImpl{}
 }

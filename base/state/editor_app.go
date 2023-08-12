@@ -12,7 +12,7 @@ type EditorApp struct {
 	mainWindow     fyne.Window
 }
 
-func (e *EditorApp) AddFileExtention(open func(string)) {
+func (e *EditorApp) AddFileExtention(extentionWithoutDot string, open func(string)) {
 	//TODO implement file extentiofyne
 	panic("not implemented")
 }

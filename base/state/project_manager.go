@@ -36,7 +36,7 @@ func (p *ProjectManager) Save(app *EditorApp) {
 	app.app.Preferences().SetString("recent", strings.Join(p.recentProjects, "\n"))
 }
 
-func (p *ProjectManager) Open(idx int) {
+func (p *ProjectManager) OpenProject(idx int) {
 	p.openPath = p.recentProjects[idx]
 	p.isOpen = true
 	// to move to top
