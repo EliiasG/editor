@@ -8,18 +8,24 @@ import (
 
 type EditorApp struct {
 	projectManager *ProjectManager
+	tabManager     *TabManager
 	app            fyne.App
 	mainWindow     fyne.Window
+	fileHandlers   map[string]func(string)
 }
 
 func (e *EditorApp) AddFileExtention(extentionWithoutDot string, open func(string)) {
-	//TODO implement file extentiofyne
-	panic("not implemented")
+	e.fileHandlers[extentionWithoutDot] = open
 }
 
-func (e *EditorApp) OpenTab(tab Tab) {
-	//TODO implement opening tabs
-	panic("not implemented")
+func (e *EditorApp) AddShortcut(name string, shortcut fyne.Shortcut) {
+	e.mainWindow.Canvas().AddShortcut(shortcut, func(_ fyne.Shortcut) {
+		e.tabManager.SelectedTab().ShortcutPressed(name)
+	})
+}
+
+func (e *EditorApp) TabManager() *TabManager {
+	return e.tabManager
 }
 
 func (e *EditorApp) AddFeature(feature Feature) {
@@ -43,8 +49,10 @@ func (e *EditorApp) MainWindow() fyne.Window {
 func NewEditorApp() EditorApp {
 	eApp := EditorApp{}
 	eApp.app = app.NewWithID("eliiasg.editor")
+	eApp.fileHandlers = make(map[string]func(string))
 	eApp.app.Settings().SetTheme(theme.AdwaitaTheme())
 	eApp.projectManager = LoadProjectManagerFromSave(&eApp)
+	eApp.tabManager = NewTabManager()
 	eApp.mainWindow = eApp.app.NewWindow("Editor")
 	eApp.mainWindow.SetMaster()
 	return eApp

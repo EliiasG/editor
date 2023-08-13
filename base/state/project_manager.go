@@ -1,10 +1,12 @@
 package state
 
 import (
+	pth "path"
 	"slices"
 	"strings"
 
 	"github.com/eliiasg/editor/base/fileactions"
+	op "github.com/skratchdot/open-golang/open"
 )
 
 type ProjectManager struct {
@@ -53,6 +55,15 @@ func (p *ProjectManager) FileActions() fileactions.FileActions {
 }
 
 func LoadProjectManagerFromSave(app *EditorApp) *ProjectManager {
+	open := func(path string) {
+		ext := pth.Ext(path)[1:]
+		if handler := app.fileHandlers[ext]; handler == nil {
+			op.Start(path)
+		} else {
+			handler(path)
+		}
+	}
+
 	projects := app.app.Preferences().StringWithFallback("recent", "")
 	var projectSlice []string
 	if projects != "" {
@@ -60,6 +71,6 @@ func LoadProjectManagerFromSave(app *EditorApp) *ProjectManager {
 	}
 	return &ProjectManager{
 		recentProjects: projectSlice,
-		fileActions:    fileactions.NewSimple(),
+		fileActions:    fileactions.NewSimple(open),
 	}
 }

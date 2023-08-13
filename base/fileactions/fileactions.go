@@ -5,7 +5,6 @@ import (
 	pth "path"
 
 	cp "github.com/otiai10/copy"
-
 	"github.com/skratchdot/open-golang/open"
 )
 
@@ -25,11 +24,11 @@ type FileActions interface {
 type simpleImpl struct {
 	copied  string
 	cutting bool
+	open    func(string)
 }
 
 func (f *simpleImpl) Open(path string) {
-	open.Start(path)
-	//TODO features
+	f.open(path)
 }
 
 func (f *simpleImpl) Delete(path string) {
@@ -83,6 +82,6 @@ func exists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-func NewSimple() FileActions {
-	return &simpleImpl{}
+func NewSimple(open func(string)) FileActions {
+	return &simpleImpl{open: open}
 }
