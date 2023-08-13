@@ -4,6 +4,7 @@ package filetree
 
 import (
 	"sort"
+	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -36,6 +37,7 @@ func newFileTreeLabel(text string) fyne.CanvasObject {
 // FileTree extends widget.Tree to display a file system hierarchy.
 type FileTree struct {
 	widget.Tree
+	mu           sync.Mutex
 	Filter       storage.FileFilter
 	ShowRootPath bool
 	Sorter       func(fyne.URI, fyne.URI) bool
@@ -66,10 +68,14 @@ func NewFileTree(root fyne.URI) *FileTree {
 		uriCache:      make(map[widget.TreeNodeID]fyne.URI),
 	}
 	tree.IsBranch = func(id widget.TreeNodeID) bool {
+		tree.mu.Lock()
+		defer tree.mu.Unlock()
 		_, err := tree.toListable(id)
 		return err == nil
 	}
 	tree.ChildUIDs = func(id widget.TreeNodeID) (c []string) {
+		tree.mu.Lock()
+		defer tree.mu.Unlock()
 		listable, err := tree.toListable(id)
 		if err != nil {
 			fyne.LogError("Unable to get lister for "+id, err)
@@ -96,6 +102,8 @@ func NewFileTree(root fyne.URI) *FileTree {
 		return
 	}
 	tree.UpdateNode = func(id widget.TreeNodeID, branch bool, node fyne.CanvasObject) {
+		tree.mu.Lock()
+		defer tree.mu.Unlock()
 		uri, err := tree.toURI(id)
 		if err != nil {
 			fyne.LogError("Unable to parse URI", err)
@@ -137,6 +145,8 @@ func NewFileTree(root fyne.URI) *FileTree {
 	}
 	// reset sorted child ID cache if the branch is closed - in the future we do FS watch
 	tree.OnBranchClosed = func(id widget.TreeNodeID) {
+		tree.mu.Lock()
+		defer tree.mu.Unlock()
 		delete(tree.listCache, id)
 	}
 

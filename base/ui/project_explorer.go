@@ -7,9 +7,12 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/eliiasg/editor/base/fileactions"
+	"github.com/eliiasg/editor/base/fileutil"
 	"github.com/eliiasg/editor/base/state"
 	"github.com/eliiasg/editor/base/ui/filetree"
 )
@@ -19,7 +22,8 @@ func NewProjectExplorer(app *state.EditorApp) fyne.CanvasObject {
 	//exp.ExtendBaseWidget(exp)
 	projMan := app.ProjectManager()
 	tree := filetree.NewFileTree(storage.NewFileURI(projMan.Path()))
-	tree.Refresh()
+	filter := fileutil.NewSearchFilter(projMan.Path())
+	tree.Filter = filter
 	tree.RightClicked = func(id widget.TreeNodeID, e *fyne.PointEvent) {
 		showProjectManagerContextMenu(
 			storage.NewFileURI(id),
@@ -27,12 +31,79 @@ func NewProjectExplorer(app *state.EditorApp) fyne.CanvasObject {
 			e.AbsolutePosition,
 			func() {
 				reload(&tree.Tree)
+				filter.UpdateCache()
 			},
 			app.MainWindow(),
 		)
 	}
 	handleSelect(&tree.Tree, projMan.FileActions())
-	return tree
+	return container.NewBorder(
+		newEntrySection(filter, app, func() {
+			go reload(&tree.Tree)
+		}, &tree.Tree),
+		nil,
+		nil,
+		nil,
+		tree,
+	)
+}
+
+func newEntrySection(filter *fileutil.SearchFilter, app *state.EditorApp, changed func(), tree *widget.Tree) fyne.CanvasObject {
+	entry := widget.NewEntry()
+	shortcut := &desktop.CustomShortcut{KeyName: fyne.KeyF, Modifier: fyne.KeyModifierAlt}
+	canvas := app.MainWindow().Canvas()
+	canvas.AddShortcut(shortcut, func(shortcut fyne.Shortcut) {
+		canvas.Focus(entry)
+		entry.TypedShortcut(&fyne.ShortcutSelectAll{})
+	})
+	clearButton := widget.NewButtonWithIcon("", theme.ContentClearIcon(), func() {
+		entry.SetText("")
+	})
+	var state []string
+	var old string
+	entry.OnChanged = func(s string) {
+		if old == "" {
+			state = getTreeState(tree)
+		}
+		if s == "" {
+			setTreeState(tree, state)
+		} else {
+			tree.OpenAllBranches()
+		}
+		go filter.UpdateSearch(s, "", true)
+		changed()
+		old = s
+	}
+	return container.NewBorder(
+		nil,
+		nil,
+		nil,
+		clearButton,
+		entry,
+	)
+}
+
+func setTreeState(tree *widget.Tree, state []string) {
+	tree.CloseAllBranches()
+	for _, node := range state {
+		tree.OpenBranch(node)
+	}
+}
+
+func getTreeState(tree *widget.Tree) []string {
+	res := make([]string, 0)
+	getTreeUIDStates(tree, tree.Root, &res)
+	return res
+}
+
+func getTreeUIDStates(tree *widget.Tree, uid widget.TreeNodeID, state *[]string) {
+	if !tree.IsBranchOpen(uid) {
+		return
+	}
+	*state = append(*state, uid)
+	for _, uid := range tree.ChildUIDs(uid) {
+		getTreeUIDStates(tree, uid, state)
+	}
 }
 
 func handleSelect(tree *widget.Tree, actions fileactions.FileActions) {
@@ -46,7 +117,7 @@ func handleSelect(tree *widget.Tree, actions fileactions.FileActions) {
 		}
 		now := time.Now().UnixMilli()
 		if prev == uid && prevTime+DoubleClickTimeMS >= now {
-			actions.Open(getFSPath(storage.NewFileURI(uid)))
+			actions.Open(fileutil.GetFSPath(storage.NewFileURI(uid)))
 		}
 		prev = uid
 		prevTime = now
@@ -78,7 +149,7 @@ func showProjectManagerContextMenu(uri fyne.URI, actions fileactions.FileActions
 }
 
 func newFSItemMenu(uri fyne.URI, actions fileactions.FileActions, reload func(), window fyne.Window) *fyne.Menu {
-	info, _ := os.Stat(getFSPath(uri))
+	info, _ := os.Stat(fileutil.GetFSPath(uri))
 	if info.IsDir() {
 		return fyne.NewMenu(
 			"",
@@ -148,10 +219,6 @@ func confirm(title, prompt string, confirmed func(), window fyne.Window) {
 	}, window).Show()
 }
 
-func getFSPath(uri fyne.URI) string {
-	return uri.Path()[7:]
-}
-
 func getRenameItem(uri fyne.URI, actions fileactions.FileActions, reload func(), window fyne.Window) *fyne.MenuItem {
 	return fyne.NewMenuItem(
 		"Rename",
@@ -161,7 +228,7 @@ func getRenameItem(uri fyne.URI, actions fileactions.FileActions, reload func(),
 				"Rename \""+uri.Name()+"\":",
 				uri.Name(),
 				func(s string) {
-					actions.Rename(getFSPath(uri), s)
+					actions.Rename(fileutil.GetFSPath(uri), s)
 					reload()
 				},
 				window,
@@ -182,7 +249,7 @@ func getDeleteItem(uri fyne.URI, actions fileactions.FileActions, reload func(),
 				"Delete "+typeName,
 				"Are you sure you want to delete \""+uri.Name()+"\"?",
 				func() {
-					actions.Delete(getFSPath(uri))
+					actions.Delete(fileutil.GetFSPath(uri))
 					reload()
 				},
 				window,
@@ -195,7 +262,7 @@ func getCutItem(uri fyne.URI, actions fileactions.FileActions, reload func()) *f
 	return fyne.NewMenuItem(
 		"Cut",
 		func() {
-			actions.Cut(getFSPath(uri))
+			actions.Cut(fileutil.GetFSPath(uri))
 			reload()
 		},
 	)
@@ -205,7 +272,7 @@ func getCopyItem(uri fyne.URI, actions fileactions.FileActions, reload func()) *
 	return fyne.NewMenuItem(
 		"Copy",
 		func() {
-			actions.Copy(getFSPath(uri))
+			actions.Copy(fileutil.GetFSPath(uri))
 			reload()
 		},
 	)
@@ -215,7 +282,7 @@ func getPasteItem(uri fyne.URI, actions fileactions.FileActions, reload func()) 
 	item := fyne.NewMenuItem(
 		"Paste",
 		func() {
-			actions.Paste(getFSPath(uri))
+			actions.Paste(fileutil.GetFSPath(uri))
 			reload()
 		},
 	)
@@ -232,7 +299,7 @@ func getMakeDirItem(uri fyne.URI, actions fileactions.FileActions, reload func()
 				"Add Directory:",
 				"NewDir",
 				func(s string) {
-					actions.CreateFolder(getFSPath(uri) + "/" + s)
+					actions.CreateFolder(fileutil.GetFSPath(uri) + "/" + s)
 					reload()
 				},
 				window,
@@ -250,7 +317,7 @@ func getMakeFileItem(uri fyne.URI, actions fileactions.FileActions, reload func(
 				"Add File:",
 				"NewFile",
 				func(s string) {
-					actions.CreateFile(getFSPath(uri) + "/" + s)
+					actions.CreateFile(fileutil.GetFSPath(uri) + "/" + s)
 					reload()
 				},
 				window,
@@ -263,7 +330,7 @@ func getRevealItem(uri fyne.URI, actions fileactions.FileActions, reload func())
 	return fyne.NewMenuItem(
 		"Show in explorer",
 		func() {
-			actions.Reveal(getFSPath(uri))
+			actions.Reveal(fileutil.GetFSPath(uri))
 			reload()
 		},
 	)
