@@ -46,6 +46,13 @@ func (e *EditorApp) MainWindow() fyne.Window {
 	return e.mainWindow
 }
 
+func (e *EditorApp) RequestFile(extentionWithoutDot string, confirm func(string), cancel func()) {
+	e.projectManager.confirm = confirm
+	e.projectManager.cancel = cancel
+	e.projectManager.filterExtention = extentionWithoutDot
+	e.projectManager.UIRequestFile()
+}
+
 func NewEditorApp() EditorApp {
 	eApp := EditorApp{}
 	eApp.app = app.NewWithID("eliiasg.editor")

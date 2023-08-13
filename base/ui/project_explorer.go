@@ -17,9 +17,9 @@ import (
 	"github.com/eliiasg/editor/base/ui/filetree"
 )
 
-func NewProjectExplorer(app *state.EditorApp) fyne.CanvasObject {
-	//exp := ProjectExplorer{}
-	//exp.ExtendBaseWidget(exp)
+// this file contains some of the worst ui code to ever exist, please read at your own risk
+
+func NewProjectExplorer(app *state.EditorApp, click func(string)) (fyne.CanvasObject, func()) {
 	projMan := app.ProjectManager()
 	tree := filetree.NewFileTree(storage.NewFileURI(projMan.Path()))
 	filter := fileutil.NewSearchFilter(projMan.Path())
@@ -36,7 +36,14 @@ func NewProjectExplorer(app *state.EditorApp) fyne.CanvasObject {
 			app.MainWindow(),
 		)
 	}
-	handleSelect(&tree.Tree, projMan.FileActions())
+	rl := func() {
+		filter.UpdateSearch("", app.ProjectManager().FilterExtention(), true)
+		reload(&tree.Tree)
+	}
+	handleSelect(&tree.Tree, projMan.FileActions(), func(s string) {
+		click(s)
+		reload(&tree.Tree)
+	})
 	return container.NewBorder(
 		newEntrySection(filter, app, func() {
 			go reload(&tree.Tree)
@@ -45,7 +52,7 @@ func NewProjectExplorer(app *state.EditorApp) fyne.CanvasObject {
 		nil,
 		nil,
 		tree,
-	)
+	), rl
 }
 
 func newEntrySection(filter *fileutil.SearchFilter, app *state.EditorApp, changed func(), tree *widget.Tree) fyne.CanvasObject {
@@ -70,7 +77,8 @@ func newEntrySection(filter *fileutil.SearchFilter, app *state.EditorApp, change
 		} else {
 			tree.OpenAllBranches()
 		}
-		go filter.UpdateSearch(s, "", true)
+		println(app.ProjectManager().FilterExtention())
+		go filter.UpdateSearch(s, app.ProjectManager().FilterExtention(), true)
 		changed()
 		old = s
 	}
@@ -106,7 +114,7 @@ func getTreeUIDStates(tree *widget.Tree, uid widget.TreeNodeID, state *[]string)
 	}
 }
 
-func handleSelect(tree *widget.Tree, actions fileactions.FileActions) {
+func handleSelect(tree *widget.Tree, actions fileactions.FileActions, click func(string)) {
 	prev := ""
 	var prevTime int64
 	tree.OnSelected = func(uid widget.TreeNodeID) {
@@ -115,9 +123,11 @@ func handleSelect(tree *widget.Tree, actions fileactions.FileActions) {
 			tree.ToggleBranch(uid)
 			return
 		}
+		path := fileutil.GetFSPath(storage.NewFileURI(uid))
+		click(path)
 		now := time.Now().UnixMilli()
 		if prev == uid && prevTime+DoubleClickTimeMS >= now {
-			actions.Open(fileutil.GetFSPath(storage.NewFileURI(uid)))
+			actions.Open(path)
 		}
 		prev = uid
 		prevTime = now
@@ -132,7 +142,7 @@ func reloadUID(tree *widget.Tree, uid widget.TreeNodeID) {
 	if !tree.IsBranchOpen(uid) {
 		return
 	}
-	// whacky hacky to get node to reload
+	// whacky hacky way to get node to reload
 	tree.CloseBranch(uid)
 	tree.OpenBranch(uid)
 	for _, uid := range tree.ChildUIDs(uid) {

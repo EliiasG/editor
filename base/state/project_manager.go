@@ -10,10 +10,14 @@ import (
 )
 
 type ProjectManager struct {
-	isOpen         bool
-	openPath       string
-	recentProjects []string
-	fileActions    fileactions.FileActions
+	isOpen          bool
+	openPath        string
+	recentProjects  []string
+	fileActions     fileactions.FileActions
+	filterExtention string
+	confirm         func(string)
+	cancel          func()
+	UIRequestFile   func()
 }
 
 func (p *ProjectManager) IsOpen() bool {
@@ -22,6 +26,28 @@ func (p *ProjectManager) IsOpen() bool {
 
 func (p *ProjectManager) Path() string {
 	return p.openPath
+}
+
+func (p *ProjectManager) IsRequesting() bool {
+	return p.confirm != nil
+}
+
+func (p *ProjectManager) FilterExtention() string {
+	return p.filterExtention
+}
+
+func (p *ProjectManager) CancelFileSelection() {
+	p.cancel()
+	p.confirm = nil
+	p.cancel = nil
+	p.filterExtention = ""
+}
+
+func (p *ProjectManager) ConfirmFileSelection(path string) {
+	p.confirm(path)
+	p.confirm = nil
+	p.cancel = nil
+	p.filterExtention = ""
 }
 
 func (p *ProjectManager) AddProject(path string) {
@@ -55,6 +81,7 @@ func (p *ProjectManager) FileActions() fileactions.FileActions {
 }
 
 func LoadProjectManagerFromSave(app *EditorApp) *ProjectManager {
+	var projectManager *ProjectManager
 	open := func(path string) {
 		ext := pth.Ext(path)[1:]
 		if handler := app.fileHandlers[ext]; handler == nil {
@@ -69,8 +96,9 @@ func LoadProjectManagerFromSave(app *EditorApp) *ProjectManager {
 	if projects != "" {
 		projectSlice = strings.Split(projects, "\n")
 	}
-	return &ProjectManager{
+	projectManager = &ProjectManager{
 		recentProjects: projectSlice,
 		fileActions:    fileactions.NewSimple(open),
 	}
+	return projectManager
 }

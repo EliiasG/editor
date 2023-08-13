@@ -58,7 +58,8 @@ func (f *SearchFilter) addMatching(path, search, extension string, ignoreCase bo
 		search = strings.ToLower(search)
 	}
 	if extension != "" {
-		matching = pth.Ext(path)[1:] == extension
+		ext := pth.Ext(path)
+		matching = ext != "" && ext[1:] == extension
 	}
 	if search != "" {
 		matching = matching && strings.Contains(sPath, search)
